@@ -46,6 +46,28 @@ def test_unknown_when_no_keywords():
     assert status == StockStatus.UNKNOWN
 
 
+def test_config_expands_env_vars(tmp_path, monkeypatch):
+    import json
+
+    from inventory_checker.config import load_config
+
+    monkeypatch.setenv("MY_HOOK", "https://example.com/hook")
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(
+        json.dumps(
+            {
+                "products": [{"name": "x", "url": "https://example.com/x"}],
+                "notifications": {
+                    "webhook": {"enabled": True, "url": "${MY_HOOK}", "format": "discord"}
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    cfg = load_config(cfg_path)
+    assert cfg.webhook.url == "https://example.com/hook"
+
+
 def test_state_store_roundtrip(tmp_path):
     path = tmp_path / "state.json"
     store = StateStore(path)

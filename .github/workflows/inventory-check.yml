@@ -1,0 +1,59 @@
+name: Inventory Check
+
+# クラウド(GitHub Actions)上で定期的に在庫をチェックする。
+# - スケジュール実行はデフォルトブランチ(main)の本ファイルが使われる。
+# - 在庫状態が変化したとき(在庫あり等)だけ Discord に通知する。
+on:
+  schedule:
+    # 30分ごと(UTC)。:07 / :37 にずらして毎時00分の混雑による遅延を避ける。
+    - cron: "7,37 * * * *"
+  workflow_dispatch: {}  # 手動実行も可能
+
+# 同時実行を防ぎ、state キャッシュの競合を避ける
+concurrency:
+  group: inventory-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check Discord webhook secret
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "::error::Secret 'DISCORD_WEBHOOK_URL' が未設定です。リポジトリの Settings > Secrets and variables > Actions で登録してください。"
+            exit 1
+          fi
+
+      # 前回の在庫状態(state.json)を実行間で引き継ぐ。
+      # key は実行ごとに一意 → 毎回新しいキャッシュを保存。
+      # restore-keys のプレフィックス一致で直近の state を復元する。
+      - name: Restore previous state
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: inventory-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            inventory-state-
+
+      - name: Run inventory check
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python main.py --once --config config.ci.json --state state.json

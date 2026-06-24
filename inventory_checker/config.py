@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -89,6 +90,21 @@ def _require(data: dict[str, Any], key: str, context: str) -> Any:
     return data[key]
 
 
+def _expand_env(value: Any) -> Any:
+    """設定値の文字列に含まれる ${VAR} / $VAR を環境変数で置換する.
+
+    CI(GitHub Actions)などで Webhook URL や認証情報を Secret から
+    渡せるようにするための仕組み。未定義の変数はそのまま残す。
+    """
+    if isinstance(value, str):
+        return os.path.expandvars(value)
+    if isinstance(value, dict):
+        return {k: _expand_env(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_expand_env(v) for v in value]
+    return value
+
+
 def load_config(path: str | Path) -> Config:
     """JSON 設定ファイルを読み込んで Config を返す."""
     path = Path(path)
@@ -99,7 +115,7 @@ def load_config(path: str | Path) -> Config:
         )
 
     with path.open(encoding="utf-8") as fh:
-        data = json.load(fh)
+        data = _expand_env(json.load(fh))
 
     products: list[Product] = []
     for raw in data.get("products", []):

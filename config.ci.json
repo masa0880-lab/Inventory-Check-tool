@@ -1,0 +1,43 @@
+{
+  "interval_minutes": 30,
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "request_timeout_seconds": 20,
+  "notify_on": ["in_stock"],
+  "products": [
+    {
+      "name": "監視対象商品 2110693846",
+      "url": "https://7net.omni7.jp/detail/2110693846"
+    }
+  ],
+  "notifications": {
+    "console": true,
+    "webhook": {
+      "enabled": true,
+      "url": "${DISCORD_WEBHOOK_URL}",
+      "format": "discord"
+    }
+  },
+  "stock_keywords": {
+    "out_of_stock": [
+      "在庫切れ",
+      "在庫がございません",
+      "申し訳ございません",
+      "販売を終了",
+      "予約受付を終了",
+      "お取り扱いできません",
+      "SOLD OUT",
+      "売り切れ",
+      "入荷待ち",
+      "入荷予定はございません",
+      "現在お取り扱いできません"
+    ],
+    "in_stock": [
+      "カートに入れる",
+      "在庫あり",
+      "ご注文手続きへ",
+      "レジに進む",
+      "今すぐ購入",
+      "ご購入手続きへ"
+    ]
+  }
+}
