@@ -5,8 +5,8 @@ name: Inventory Check
 # - 在庫状態が変化したとき(在庫あり等)だけ Discord に通知する。
 on:
   schedule:
-    # 30分ごと(UTC)。:07 / :37 にずらして毎時00分の混雑による遅延を避ける。
-    - cron: "7,37 * * * *"
+    # 5分ごと(GitHub Actions のスケジュールで指定できる最短間隔)。
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}  # 手動実行も可能
 
 # 同時実行を防ぎ、state キャッシュの競合を避ける

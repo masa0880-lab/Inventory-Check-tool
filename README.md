@@ -76,7 +76,7 @@ python main.py --config config.json --state state.json
 ## クラウドで定期実行する (GitHub Actions)
 
 専用サーバーを用意せず、GitHub Actions のスケジュール実行で定期チェックできます。
-`.github/workflows/inventory-check.yml` が30分ごと(UTC の :07 / :37)に
+`.github/workflows/inventory-check.yml` が5分ごと(GitHub Actions の最短間隔)に
 `python main.py --once` を実行し、在庫が変化したとき Discord に通知します。
 
 ### セットアップ手順
@@ -100,6 +100,11 @@ python main.py --config config.json --state state.json
   **状態が変化したときだけ**通知されます。
 - チェック間隔を変えたい場合は、ワークフローの `cron` を編集してください
   (GitHub Actions の最短間隔は5分です)。
+
+> **注意(private リポジトリの無料枠):** private リポジトリの GitHub Actions は無料枠が
+> 月2,000分です。5分間隔だと1回あたり約1分の実行が1日約288回になり、無料枠を超える場合があります。
+> 使用量は **Settings → Billing** で確認できます。超過が気になる場合は間隔を広げるか、
+> リポジトリを public にする(Actions が無制限・無料になる)ことを検討してください。
 
 > **注意:** GitHub のスケジュール実行は、リポジトリが60日間操作されないと自動停止します。
 > また実ページの在庫表記に合わせて `config.ci.json` の `stock_keywords` を調整してください。
