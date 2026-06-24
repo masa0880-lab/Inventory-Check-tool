@@ -73,6 +73,43 @@ python main.py --config config.json --state state.json
 > 在庫を判定できないことがあります(その場合 `unknown` になります)。その際は対象 API の利用や
 > ヘッドレスブラウザの導入など、取得方法の拡張が必要です。
 
+## クラウドで定期実行する (GitHub Actions)
+
+専用サーバーを用意せず、GitHub Actions のスケジュール実行で定期チェックできます。
+`.github/workflows/inventory-check.yml` が**日本時間 9:00〜21:00 のあいだ 5分ごと**に
+`python main.py --once` を実行し、在庫が変化したとき Discord に通知します。
+(GitHub Actions の cron は UTC 基準のため、JST 9:00〜21:00 = UTC 0:00〜12:00 として設定しています。)
+
+### セットアップ手順
+
+1. **Discord の Webhook URL を用意する**
+   Discord のチャンネル設定 →「連携サービス」→「ウェブフック」→「新しいウェブフック」で
+   URL をコピーします。
+2. **リポジトリに Secret を登録する**
+   GitHub のリポジトリで **Settings → Secrets and variables → Actions → New repository secret** を開き、
+   - Name: `DISCORD_WEBHOOK_URL`
+   - Secret: コピーした Webhook URL
+   を登録します。
+3. ワークフローはデフォルトブランチ(`main`)にマージされると自動で有効になります。
+   **Actions** タブの「Inventory Check」から `Run workflow` で手動実行して動作確認できます。
+
+### 仕組みのポイント
+
+- 設定ファイル `config.ci.json` の `${DISCORD_WEBHOOK_URL}` が実行時に Secret で置換されます
+  (URL をリポジトリに直接書かないため安全)。
+- 前回の在庫状態 `state.json` は Actions のキャッシュで実行間に引き継がれ、
+  **状態が変化したときだけ**通知されます。
+- チェック間隔や時間帯を変えたい場合は、ワークフローの `cron` を編集してください
+  (GitHub Actions の最短間隔は5分。cron は UTC 基準なので JST との時差9時間に注意)。
+
+> **注意(private リポジトリの無料枠):** private リポジトリの GitHub Actions は無料枠が
+> 月2,000分です。JST 9:00〜21:00 の5分間隔だと1回あたり約1分の実行が1日約145回(月約4,400分)になり、無料枠を超える場合があります。
+> 使用量は **Settings → Billing** で確認できます。超過が気になる場合は間隔を広げるか、
+> リポジトリを public にする(Actions が無制限・無料になる)ことを検討してください。
+
+> **注意:** GitHub のスケジュール実行は、リポジトリが60日間操作されないと自動停止します。
+> また実ページの在庫表記に合わせて `config.ci.json` の `stock_keywords` を調整してください。
+
 ## テスト
 
 ```bash
