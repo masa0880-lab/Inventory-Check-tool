@@ -9,7 +9,12 @@ on:
     # cron は UTC 基準のため JST 9:00〜21:00 = UTC 0:00〜12:00 に変換。
     - cron: "*/5 0-11 * * *"   # UTC 0:00〜11:55  = JST 9:00〜20:55(5分ごと)
     - cron: "0 12 * * *"       # UTC 12:00        = JST 21:00(締めの1回)
-  workflow_dispatch: {}  # 手動実行も可能
+  workflow_dispatch:  # 手動実行も可能
+    inputs:
+      test_notify:
+        description: "テスト通知を送る (在庫に関係なくDiscordへ1回送信して連携を確認)"
+        type: boolean
+        default: false
 
 # 同時実行を防ぎ、state キャッシュの競合を避ける
 concurrency:
@@ -58,4 +63,10 @@ jobs:
       - name: Run inventory check
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python main.py --once --config config.ci.json --state state.json
+        run: |
+          if [ "${{ github.event.inputs.test_notify }}" = "true" ]; then
+            echo "テスト通知モードで実行します。"
+            python main.py --test-notify --config config.ci.json
+          else
+            python main.py --once --config config.ci.json --state state.json
+          fi

@@ -93,6 +93,15 @@ python main.py --config config.json --state state.json
 3. ワークフローはデフォルトブランチ(`main`)にマージされると自動で有効になります。
    **Actions** タブの「Inventory Check」から `Run workflow` で手動実行して動作確認できます。
 
+### 通知のテスト
+
+在庫の状態に関係なく、Discord連携が正しく動くか確認できます。
+
+- **GitHub上で:** Actions タブ →「Inventory Check」→「Run workflow」→
+  **「テスト通知を送る」にチェック**を入れて実行すると、Discord にテストメッセージが届きます。
+- **ローカルで:** `python main.py --test-notify --config config.ci.json`
+  (環境変数 `DISCORD_WEBHOOK_URL` を設定しておく)
+
 ### 仕組みのポイント
 
 - 設定ファイル `config.ci.json` の `${DISCORD_WEBHOOK_URL}` が実行時に Secret で置換されます
