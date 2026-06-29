@@ -24,7 +24,7 @@ import requests
 
 from inventory_checker.checker import StockStatus, check_product
 from inventory_checker.config import load_config
-from inventory_checker.notifier import notify
+from inventory_checker.notifier import notify, send_test
 from inventory_checker.state import StateStore
 
 logger = logging.getLogger("inventory_check")
@@ -93,6 +93,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="1回だけチェックして終了する (cron 向け)",
     )
+    parser.add_argument(
+        "--test-notify",
+        action="store_true",
+        help="在庫に関係なくテスト通知を1回送って終了する (通知連携の確認用)",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -102,7 +107,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        if args.once:
+        if args.test_notify:
+            send_test(load_config(args.config))
+            logger.info("テスト通知を送信しました。")
+        elif args.once:
             run_once(args.config, args.state)
         else:
             run_loop(args.config, args.state)

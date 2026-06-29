@@ -29,7 +29,22 @@ def _build_message(result: CheckResult, previous: str | None) -> tuple[str, str]
 def notify(config: Config, result: CheckResult, previous: str | None) -> None:
     """設定されているすべての通知チャネルへ送信する."""
     title, body = _build_message(result, previous)
+    _dispatch(config, title, body)
 
+
+def send_test(config: Config) -> None:
+    """在庫状態に関係なく、テスト通知を送る (Discord 連携の動作確認用)."""
+    title = "🔔 テスト通知 (在庫チェックツール)"
+    body = (
+        "これはテスト通知です。\n"
+        "このメッセージが届いていれば、通知の連携は正常に動いています。\n"
+        "実際の在庫通知は、商品が「在庫あり」に変化したときに届きます。"
+    )
+    _dispatch(config, title, body)
+
+
+def _dispatch(config: Config, title: str, body: str) -> None:
+    """各通知チャネル (コンソール / Webhook / メール) へ送信する."""
     if config.console:
         print("\n" + "=" * 50)
         print(f"🔔 {title}")
