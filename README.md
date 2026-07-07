@@ -76,9 +76,18 @@ python main.py --config config.json --state state.json
 ## クラウドで定期実行する (GitHub Actions)
 
 専用サーバーを用意せず、GitHub Actions のスケジュール実行で定期チェックできます。
-`.github/workflows/inventory-check.yml` が**日本時間 9:00〜21:00 のあいだ 5分ごと**に
-`python main.py --once` を実行し、在庫が変化したとき Discord に通知します。
-(GitHub Actions の cron は UTC 基準のため、JST 9:00〜21:00 = UTC 0:00〜12:00 として設定しています。)
+`.github/workflows/inventory-check.yml` が**日本時間 9:00〜21:00 のあいだ 3分ごと**に
+在庫をチェックし、在庫が変化したとき Discord に通知します。
+
+GitHub Actions の cron は最短5分間隔のため、3分間隔は「1つのジョブ内で
+`python main.py`(ループモード)を3分ごとに回し、約59分で終了 → 次の毎時 cron で再起動」
+という方式で実現しています(cron は UTC 基準。UTC 0〜11時 = JST 9〜20時 に毎時起動)。
+
+> **重要(実行コスト):** この方式はジョブがほぼ連続稼働するため、Actions の実行時間を
+> 多く消費します。**private リポジトリの無料枠(月2,000分)では数日で上限に達し停止**します。
+> 常時無料で回すには、**リポジトリを public にする**(Actions が無制限・無料になる)ことを推奨します。
+> private のまま使う場合は、間隔を広げる(`config.ci.json` の `interval_minutes` と
+> ワークフローの構成変更)か、使用量を **Settings → Billing** で監視してください。
 
 ### セットアップ手順
 
@@ -108,13 +117,9 @@ python main.py --config config.json --state state.json
   (URL をリポジトリに直接書かないため安全)。
 - 前回の在庫状態 `state.json` は Actions のキャッシュで実行間に引き継がれ、
   **状態が変化したときだけ**通知されます。
-- チェック間隔や時間帯を変えたい場合は、ワークフローの `cron` を編集してください
-  (GitHub Actions の最短間隔は5分。cron は UTC 基準なので JST との時差9時間に注意)。
-
-> **注意(private リポジトリの無料枠):** private リポジトリの GitHub Actions は無料枠が
-> 月2,000分です。JST 9:00〜21:00 の5分間隔だと1回あたり約1分の実行が1日約145回(月約4,400分)になり、無料枠を超える場合があります。
-> 使用量は **Settings → Billing** で確認できます。超過が気になる場合は間隔を広げるか、
-> リポジトリを public にする(Actions が無制限・無料になる)ことを検討してください。
+- チェック間隔は `config.ci.json` の `interval_minutes` で調整できます(既定3分)。
+  時間帯を変えたい場合はワークフローの `cron`(UTC 基準、JST との時差9時間)と、
+  1ジョブの実行時間 `--max-runtime` を編集してください。
 
 > **注意:** GitHub のスケジュール実行は、リポジトリが60日間操作されないと自動停止します。
 > また実ページの在庫表記に合わせて `config.ci.json` の `stock_keywords` を調整してください。

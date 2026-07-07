@@ -5,10 +5,12 @@ name: Inventory Check
 # - 在庫状態が変化したとき(在庫あり等)だけ Discord に通知する。
 on:
   schedule:
-    # 日本時間(JST=UTC+9)の 9:00〜21:00 のみ、5分ごとに実行する。
-    # cron は UTC 基準のため JST 9:00〜21:00 = UTC 0:00〜12:00 に変換。
-    - cron: "*/5 0-11 * * *"   # UTC 0:00〜11:55  = JST 9:00〜20:55(5分ごと)
-    - cron: "0 12 * * *"       # UTC 12:00        = JST 21:00(締めの1回)
+    # 日本時間(JST=UTC+9)の 9:00〜21:00 のみ、3分ごとにチェックする。
+    # GitHub Actions の cron は最短5分間隔のため、3分を実現するには
+    # 1つのジョブ内でループ実行する。各ジョブは3分ごとにチェックして
+    # 約59分で終了し、次の「毎時起動」の cron が再起動する。
+    # cron は UTC 基準。UTC 0〜11時 = JST 9〜20時 の毎時2分に起動。
+    - cron: "2 0-11 * * *"
   workflow_dispatch:  # 手動実行も可能
     inputs:
       test_notify:
@@ -27,6 +29,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # ループ実行(約59分)の安全上限。万一終了しなくてもここで打ち切る。
+    timeout-minutes: 62
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,5 +72,7 @@ jobs:
             echo "テスト通知モードで実行します。"
             python main.py --test-notify --config config.ci.json
           else
-            python main.py --once --config config.ci.json --state state.json
+            # config.ci.json の interval_minutes(=3分)ごとにループ。
+            # 約59分(3540秒)で自動終了し、次の毎時 cron が再起動する。
+            python main.py --config config.ci.json --state state.json --max-runtime 3540
           fi

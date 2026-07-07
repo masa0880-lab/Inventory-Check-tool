@@ -63,18 +63,29 @@ def run_once(config_path: str, state_path: str) -> None:
         store.set(product.url, status_value)
 
 
-def run_loop(config_path: str, state_path: str) -> None:
+def run_loop(
+    config_path: str, state_path: str, max_runtime_seconds: float | None = None
+) -> None:
     config = load_config(config_path)
     interval_seconds = max(config.interval_minutes * 60, 5)
     logger.info(
         "常駐モードで起動しました。%.0f 分ごとにチェックします。Ctrl+C で停止。",
         config.interval_minutes,
     )
+    started = time.monotonic()
     while True:
         try:
             run_once(config_path, state_path)
         except Exception as exc:  # noqa: BLE001 - 1回の失敗でループを止めない
             logger.error("チェック中にエラーが発生しました: %s", exc)
+        # 実行時間の上限に達したら終了する
+        # (GitHub Actions のようにジョブを時間で区切って再起動する運用向け)
+        if (
+            max_runtime_seconds is not None
+            and time.monotonic() - started >= max_runtime_seconds
+        ):
+            logger.info("実行時間の上限に達したため終了します。")
+            return
         time.sleep(interval_seconds)
 
 
@@ -98,6 +109,13 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="在庫に関係なくテスト通知を1回送って終了する (通知連携の確認用)",
     )
+    parser.add_argument(
+        "--max-runtime",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="常駐モードで、この秒数を過ぎたら終了する (cronでジョブを再起動する運用向け)",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -113,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.once:
             run_once(args.config, args.state)
         else:
-            run_loop(args.config, args.state)
+            run_loop(args.config, args.state, max_runtime_seconds=args.max_runtime)
     except (FileNotFoundError, ValueError) as exc:
         logger.error("%s", exc)
         return 1
