@@ -41,6 +41,8 @@ DEFAULT_IN_STOCK_KEYWORDS = [
 class Product:
     name: str
     url: str
+    # 監視対象をショップ単位でグルーピングするための識別名 (省略時は「その他」扱い)
+    shop: str = ""
     # 商品ごとにキーワードを上書きしたい場合に使用 (省略時はグローバル設定を使う)
     out_of_stock: list[str] | None = None
     in_stock: list[str] | None = None
@@ -123,6 +125,7 @@ def load_config(path: str | Path) -> Config:
             Product(
                 name=_require(raw, "name", "products[]"),
                 url=_require(raw, "url", "products[]"),
+                shop=raw.get("shop", ""),
                 out_of_stock=raw.get("out_of_stock"),
                 in_stock=raw.get("in_stock"),
             )

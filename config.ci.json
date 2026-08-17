@@ -6,18 +6,22 @@
   "products": [
     {
       "name": "7net 2110693846",
+      "shop": "7net",
       "url": "https://7net.omni7.jp/detail/2110693846"
     },
     {
       "name": "イオン P-2135500002693",
+      "shop": "イオン",
       "url": "https://aeonretail.com/product/0/P-2135500002693"
     },
     {
       "name": "イオン P-2135500001832",
+      "shop": "イオン",
       "url": "https://aeonretail.com/product/0/P-2135500001832"
     },
     {
       "name": "イオン P-4521329427270",
+      "shop": "イオン",
       "url": "https://aeonretail.com/product/0/P-4521329427270"
     }
   ],

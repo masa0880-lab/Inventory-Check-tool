@@ -48,7 +48,7 @@ python main.py --config config.json --state state.json
 | `user_agent` | リクエスト時の User-Agent |
 | `request_timeout_seconds` | HTTP タイムアウト(秒) |
 | `notify_on` | 通知する状態の配列。例 `["in_stock"]` で「在庫あり」に変化したときのみ通知 |
-| `products` | 監視対象商品の配列(`name` と `url`。任意で `in_stock` / `out_of_stock` キーワードを商品ごとに上書き可) |
+| `products` | 監視対象商品の配列(`name` と `url`。任意で `shop`(ショップ名。チェック時にショップ単位でグルーピングされる)、`in_stock` / `out_of_stock` キーワードを商品ごとに上書き可) |
 | `notifications.console` | コンソール出力の有効/無効 |
 | `notifications.webhook` | Webhook 通知設定(`format`: `slack` / `discord` / `raw`) |
 | `notifications.email` | SMTP メール通知設定 |
