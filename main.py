@@ -18,16 +18,27 @@ import argparse
 import logging
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime
 
 import requests
 
 from inventory_checker.checker import StockStatus, check_product
-from inventory_checker.config import load_config
+from inventory_checker.config import Product, load_config
 from inventory_checker.notifier import notify, send_test
 from inventory_checker.state import StateStore
 
 logger = logging.getLogger("inventory_check")
+
+UNSPECIFIED_SHOP = "その他"
+
+
+def group_by_shop(products: list[Product]) -> dict[str, list[Product]]:
+    """商品リストを shop フィールドでグルーピングする (config 内の登場順を保持)."""
+    grouped: dict[str, list[Product]] = defaultdict(list)
+    for product in products:
+        grouped[product.shop or UNSPECIFIED_SHOP].append(product)
+    return grouped
 
 
 def run_once(config_path: str, state_path: str) -> None:
@@ -38,29 +49,32 @@ def run_once(config_path: str, state_path: str) -> None:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     logger.info("在庫チェック開始 (%s) — 対象 %d 件", timestamp, len(config.products))
 
-    for product in config.products:
-        result = check_product(product, config, session=session)
-        previous = store.get(product.url)
-        logger.info(
-            "[%s] %s (前回: %s)",
-            result.status.label,
-            product.name,
-            previous or "なし",
-        )
+    for shop, products in group_by_shop(config.products).items():
+        logger.info("--- %s (%d件) ---", shop, len(products))
 
-        if result.status == StockStatus.ERROR:
-            # 取得エラーは状態を更新せず、ログのみ (ネットワーク一時障害などを変化として扱わない)
-            logger.warning("  取得エラー: %s", result.detail)
-            continue
+        for product in products:
+            result = check_product(product, config, session=session)
+            previous = store.get(product.url)
+            logger.info(
+                "[%s] %s (前回: %s)",
+                result.status.label,
+                product.name,
+                previous or "なし",
+            )
 
-        status_value = result.status.value
-        changed = previous != status_value
-        should_notify = changed and status_value in config.notify_on
+            if result.status == StockStatus.ERROR:
+                # 取得エラーは状態を更新せず、ログのみ (ネットワーク一時障害などを変化として扱わない)
+                logger.warning("  取得エラー: %s", result.detail)
+                continue
 
-        if should_notify:
-            notify(config, result, previous)
+            status_value = result.status.value
+            changed = previous != status_value
+            should_notify = changed and status_value in config.notify_on
 
-        store.set(product.url, status_value)
+            if should_notify:
+                notify(config, result, previous)
+
+            store.set(product.url, status_value)
 
 
 def run_loop(

@@ -9,8 +9,10 @@ from inventory_checker.checker import StockStatus, determine_status  # noqa: E40
 from inventory_checker.config import (  # noqa: E402
     DEFAULT_IN_STOCK_KEYWORDS,
     DEFAULT_OUT_OF_STOCK_KEYWORDS,
+    Product,
 )
 from inventory_checker.state import StateStore  # noqa: E402
+from main import group_by_shop  # noqa: E402
 
 
 def test_in_stock_detected():
@@ -66,6 +68,22 @@ def test_config_expands_env_vars(tmp_path, monkeypatch):
     )
     cfg = load_config(cfg_path)
     assert cfg.webhook.url == "https://example.com/hook"
+
+
+def test_group_by_shop_groups_and_preserves_order():
+    products = [
+        Product(name="7net A", url="https://7net.omni7.jp/a", shop="7net"),
+        Product(name="イオン A", url="https://aeonretail.com/a", shop="イオン"),
+        Product(name="7net B", url="https://7net.omni7.jp/b", shop="7net"),
+        Product(name="未分類", url="https://example.com/x"),
+    ]
+
+    grouped = group_by_shop(products)
+
+    assert list(grouped.keys()) == ["7net", "イオン", "その他"]
+    assert [p.name for p in grouped["7net"]] == ["7net A", "7net B"]
+    assert [p.name for p in grouped["イオン"]] == ["イオン A"]
+    assert [p.name for p in grouped["その他"]] == ["未分類"]
 
 
 def test_state_store_roundtrip(tmp_path):
