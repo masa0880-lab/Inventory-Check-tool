@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -70,7 +71,11 @@ def check_product(
     in_kw = product.in_stock or config.in_stock_keywords
 
     sess = session or requests.Session()
-    # 実ブラウザに近いヘッダーを送る(一部サイトはこれが無いと 403/404 を返すため)
+    parsed_url = urlparse(product.url)
+    site_root = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+    # 実ブラウザに近いヘッダーを送る(一部サイトはこれが無いと 403/404 を返すため)。
+    # Referer/Sec-Fetch-Site はサイト内を回遊してきたアクセスに見せかけることで、
+    # Referer 無しの直接アクセスを弾く一部サイトの Bot 対策を回避する。
     headers = {
         "User-Agent": config.user_agent,
         "Accept": (
@@ -80,9 +85,10 @@ def check_product(
         "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
         "Upgrade-Insecure-Requests": "1",
+        "Referer": site_root,
         "Sec-Fetch-Dest": "document",
         "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-Site": "same-origin",
         "Sec-Fetch-User": "?1",
     }
 
