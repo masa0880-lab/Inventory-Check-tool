@@ -17,6 +17,10 @@ on:
         description: "テスト通知を送る (在庫に関係なくDiscordへ1回送信して連携を確認)"
         type: boolean
         default: false
+      config:
+        description: "使用する設定ファイル (検知テスト用に config.test.json を指定可能。本番監視には影響しない)"
+        type: string
+        default: "config.ci.json"
 
 # 同時実行を防ぎ、state キャッシュの競合を避ける
 concurrency:
@@ -53,10 +57,13 @@ jobs:
             exit 1
           fi
 
-      # 前回の在庫状態(state.json)を実行間で引き継ぐ。
+      # 前回の在庫状態(state.json)を実行間で引き継ぐ。本番監視(スケジュール実行)にのみ使う。
       # key は実行ごとに一意 → 毎回新しいキャッシュを保存。
       # restore-keys のプレフィックス一致で直近の state を復元する。
+      # 手動実行(workflow_dispatch)は config.test.json 等での単発検知テストに使うため、
+      # この共有キャッシュには触れず毎回まっさらな state で実行する(本番の状態を汚さない)。
       - name: Restore previous state
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/cache@v4
         with:
           path: state.json
@@ -70,7 +77,10 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.test_notify }}" = "true" ]; then
             echo "テスト通知モードで実行します。"
-            python main.py --test-notify --config config.ci.json
+            python main.py --test-notify --config "${{ github.event.inputs.config }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "手動実行: 指定した設定ファイルを1回だけチェックします(state は保存しません)。"
+            python main.py --once --config "${{ github.event.inputs.config }}" --state state.manual.json
           else
             # config.ci.json の interval_minutes(=3分)ごとにループ。
             # 約59分(3540秒)で自動終了し、次の毎時 cron が再起動する。
